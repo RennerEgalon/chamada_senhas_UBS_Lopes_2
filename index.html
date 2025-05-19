@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Chamada de Senhas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f3f5;
+      padding: 40px;
+      text-align: center;
+    }
+
+    h2 { margin-bottom: 20px; }
+    .guiche-selector { margin-bottom: 30px; font-size: 18px; }
+    .guiche-selector label { margin: 0 15px; }
+
+    .botoes, .repetir, .reset {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 20px 40px;
+      font-size: 20px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: background-color 0.3s;
+    }
+
+    .normal { background-color: #ffffff; }
+    .preferencial { background-color: #343a40; color: white; }
+    .repetir1 { background-color: #007bff; color: white; }
+    .repetir2 { background-color: #28a745; color: white; }
+    .reset-normal { background-color: #ffc107; color: black; }
+    .reset-preferencial { background-color: #fd7e14; color: white; }
+
+    button:hover { opacity: 0.9; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2>Chamada de Senhas - UBS Lopes de Oliveira</h2>
+
+  <div class="guiche-selector">
+    <label><input type="radio" name="guiche" value="1" checked> Guichê 1</label>
+    <label><input type="radio" name="guiche" value="2"> Guichê 2</label>
+  </div>
+
+  <div class="botoes">
+    <button id="btnNormal" class="normal">Chamar Próxima Normal</button>
+    <button id="btnPreferencial" class="preferencial">Chamar Próxima Preferencial</button>
+  </div>
+
+  <div class="repetir">
+    <button id="btnR1" class="repetir1 hidden">🔁 Repetir Guichê 1</button>
+    <button id="btnR2" class="repetir2 hidden">🔁 Repetir Guichê 2</button>
+  </div>
+
+  <div class="reset">
+    <button class="reset-normal" onclick="resetarContador('Normal')">🔄 Zerar Normais</button>
+    <button class="reset-preferencial" onclick="resetarContador('Preferencial')">🔄 Zerar Preferenciais</button>
+  </div>
+
+  <!-- Firebase compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // Inicialização do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAtN_zO40we4KDaI3AJUNepTTmvG9IHc0g",
+      authDomain: "chamadasenhas.firebaseapp.com",
+      databaseURL: "https://chamadasenhas-default-rtdb.firebaseio.com",
+      projectId: "chamadasenhas",
+      storageBucket: "chamadasenhas.appspot.com",
+      messagingSenderId: "873539549847",
+      appId: "1:873539549847:web:500372c75b92b5de0487d2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const senhasPorGuiche = { "1": null, "2": null };
+
+    function getGuicheSelecionado() {
+      return document.querySelector('input[name="guiche"]:checked')?.value || '1';
+    }
+
+    function mostrarBotaoRepetir(guiche) {
+      document.getElementById(`btnR${guiche}`).classList.remove('hidden');
+    }
+
+    function falar(senha, guiche) {
+      const msg = new SpeechSynthesisUtterance(`Senha ${senha}, guichê ${guiche}`);
+      msg.lang = 'pt-BR';
+      msg.rate = 1;
+      window.speechSynthesis.speak(msg);
+    }
+
+    function chamarSenha(tipo) {
+      const guiche = getGuicheSelecionado();
+      const path = tipo === 'N' ? 'contadorNormal' : 'contadorPreferencial';
+
+      db.ref(path).once('value').then(snapshot => {
+        let contador = snapshot.val() || 1;
+        let senha = tipo === 'N'
+          ? String(contador).padStart(3, '0')
+          : 'P' + String(contador).padStart(2, '0');
+
+        db.ref(path).set(contador + 1);
+        senhasPorGuiche[guiche] = senha;
+        salvarChamada(senha, guiche);
+        falar(senha, guiche);
+        mostrarBotaoRepetir(guiche);
+      });
+    }
+
+    function repetirGuiche(guiche) {
+      const senha = senhasPorGuiche[guiche];
+      if (senha) {
+        salvarChamada(senha, guiche);
+        falar(senha, guiche);
+      }
+    }
+
+    function salvarChamada(senha, guiche) {
+      db.ref('chamadas').push({ senha, guiche, timestamp: Date.now() });
+    }
+
+    function resetarContador(tipo) {
+      const confirmMsg = tipo === 'Normal'
+        ? 'Deseja zerar as senhas normais?'
+        : 'Deseja zerar as senhas preferenciais?';
+
+      if (confirm(confirmMsg)) {
+        const path = tipo === 'Normal' ? 'contadorNormal' : 'contadorPreferencial';
+        db.ref(path).set(1);
+        alert(`Contador de senhas ${tipo.toLowerCase()} reiniciado.`);
+      }
+    }
+
+    // Atribui eventos após carregar o DOM
+    window.onload = function () {
+      // Botões principais
+      document.getElementById('btnNormal').addEventListener('click', () => chamarSenha('N'));
+      document.getElementById('btnPreferencial').addEventListener('click', () => chamarSenha('P'));
+
+      // Botões de repetir
+      document.getElementById('btnR1').addEventListener('click', () => repetirGuiche('1'));
+      document.getElementById('btnR2').addEventListener('click', () => repetirGuiche('2'));
+    };
+
+    // Atalhos de teclado (ex: N + 1, P + 2)
+    document.addEventListener('keydown', function(event) {
+      const key = event.key.toUpperCase();
+      if (key === 'N' || key === 'P' || key === 'R') {
+        document.lastKey = key;
+      } else if ((key === '1' || key === '2') && document.lastKey) {
+        const tipo = document.lastKey;
+        const guiche = key;
+        document.querySelector(`input[name="guiche"][value="${guiche}"]`).checked = true;
+
+        if (tipo === 'N' || tipo === 'P') {
+          chamarSenha(tipo);
+        } else if (tipo === 'R') {
+          repetirGuiche(guiche);
+        }
+
+        document.lastKey = null;
+      }
+    });
+  </script>
+</body>
+</html>
