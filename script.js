@@ -353,12 +353,13 @@ window.speechSynthesis.onvoiceschanged = () => {
 };
 
 document.addEventListener("DOMContentLoaded", async function () {
-  forcarSelecaoGuiche();
+
   const confirmar = confirm("Deseja reiniciar a contagem de senhas?");
 
   if (confirmar) {
     await limparSenhas();
   }
+  forcarSelecaoGuiche();
 });
 
 function forcarSelecaoGuiche() {
