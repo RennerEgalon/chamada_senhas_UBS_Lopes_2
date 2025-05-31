@@ -36,26 +36,20 @@ function voltarAoFundo() {
 }
 
 async function limparSenhas() {
+  const confirmar = confirm("⚠️ Tem certeza que deseja reiniciar todas as senhas?");
+  if (!confirmar) return;
 
-  // Reset contadores no Firebase
   await firebase.database().ref('contadorNormal').set(0);
   await firebase.database().ref('contadorPreferencial').set(0);
+  await firebase.database().ref('maioresSenhasPorColuna').remove();
 
-  // Reset contadores locais
   contadorLocal.normal = 0;
   contadorLocal.preferencial = 0;
 
-  // Reset variáveis auxiliares
   for (let key in maioresSenhasPorColuna) {
     maioresSenhasPorColuna[key] = 0;
   }
-  for (let key in ultimosBotoesPorColuna) {
-    delete ultimosBotoesPorColuna[key];
-  }
 
-  ultimaSenhaChamada = null;
-
-  // Reset visuais
   const botoes = document.querySelectorAll('.coluna button');
   botoes.forEach(btn => {
     btn.classList.remove('botao-destacado-normal', 'botao-destacado-preferencial');
@@ -64,13 +58,12 @@ async function limparSenhas() {
   atualizarUltimaSenhaNormal('');
   atualizarUltimaSenhaPreferencial('');
 
-  // Scroll para o topo de todas as colunas
   const colunas = document.querySelectorAll('.coluna');
   colunas.forEach(coluna => {
     coluna.scrollTo({ top: 0, behavior: 'smooth' });
   });
-}
 
+}
 
 
 function carregarVozes(callback) {
@@ -199,6 +192,7 @@ function criarBotao(idColuna, texto, classe) {
 
     if (!maioresSenhasPorColuna[idColuna] || numeroSenha > maioresSenhasPorColuna[idColuna]) {
       maioresSenhasPorColuna[idColuna] = numeroSenha;
+      salvarMaiorSenhaFirebase(idColuna, numeroSenha);
     }
 
     const limite = maioresSenhasPorColuna[idColuna];
@@ -243,6 +237,33 @@ function criarBotao(idColuna, texto, classe) {
   };
 
   coluna.appendChild(botao);
+}
+
+async function restaurarEstadoSenhasFirebase() {
+  const snapshot = await firebase.database().ref('maioresSenhasPorColuna').get();
+  if (!snapshot.exists()) return;
+
+  const estado = snapshot.val();
+
+  for (let idColuna in estado) {
+    const limite = estado[idColuna];
+    const isPreferencial = idColuna.includes("preferencial");
+    const classeDestaque = isPreferencial ? 'botao-destacado-preferencial' : 'botao-destacado-normal';
+
+    const coluna = document.getElementById(idColuna);
+    if (coluna) {
+      const botoes = Array.from(coluna.querySelectorAll('button'));
+      botoes.forEach(btn => {
+        const match = btn.textContent.match(/Senha (\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num <= limite) {
+            btn.classList.add(classeDestaque);
+          }
+        }
+      });
+    }
+  }
 }
 
 function obterColunaSincronizada(idColuna) {
@@ -354,9 +375,10 @@ window.speechSynthesis.onvoiceschanged = () => {
 document.addEventListener("DOMContentLoaded", async function () {
   forcarSelecaoGuiche();
   const confirmar = confirm("Deseja reiniciar a contagem de senhas?");
-
   if (confirmar) {
     await limparSenhas();
+  } else {
+    await restaurarEstadoSenhasFirebase();
   }
 });
 
