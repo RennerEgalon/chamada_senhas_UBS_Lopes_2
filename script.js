@@ -5,6 +5,10 @@ const contadorLocal = {
   preferencial: 0
 };
 
+function salvarMaiorSenhaFirebase(idColuna, numeroSenha) {
+  firebase.database().ref('maioresSenhasPorColuna/' + idColuna).set(numeroSenha);
+}
+
 function falarVacAdulto() {
   falar("Atenção, para vacinação adulto, tenha em mãos documento com foto");
 }
