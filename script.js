@@ -32,6 +32,12 @@ function voltarAoFundo() {
 }
 
 async function limparSenhas() {
+  const confirmar = confirm("⚠️ Tem certeza que deseja resetar todas as senhas?");
+
+  if (!confirmar) {
+    return; // Cancelado pelo usuário
+  }
+
   // Reset contadores no Firebase
   await firebase.database().ref('contadorNormal').set(0);
   await firebase.database().ref('contadorPreferencial').set(0);
@@ -59,9 +65,14 @@ async function limparSenhas() {
   atualizarUltimaSenhaNormal('');
   atualizarUltimaSenhaPreferencial('');
 
+  // Scroll para o topo de todas as colunas
+  const colunas = document.querySelectorAll('.coluna');
+  colunas.forEach(coluna => {
+    coluna.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
   alert("✅ Todas as senhas foram resetadas. A contagem voltará da Senha 1.");
 }
-
 
 function carregarVozes(callback) {
   const synth = window.speechSynthesis;
