@@ -352,13 +352,7 @@ window.speechSynthesis.onvoiceschanged = () => {
   carregarVozes(() => {});
 };
 
-document.addEventListener("DOMContentLoaded", async function () {
-
-  const confirmar = confirm("Deseja reiniciar a contagem de senhas?");
-
-  if (confirmar) {
-    await limparSenhas();
-  }
+document.addEventListener("DOMContentLoaded", function () {
   forcarSelecaoGuiche();
 });
 
