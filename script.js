@@ -36,9 +36,7 @@ function voltarAoFundo() {
 }
 
 async function limparSenhas() {
-  const confirmar = confirm("⚠️ Tem certeza que deseja reiniciar todas as senhas?");
-  if (!confirmar) return;
-
+  
   await firebase.database().ref('contadorNormal').set(0);
   await firebase.database().ref('contadorPreferencial').set(0);
   await firebase.database().ref('maioresSenhasPorColuna').remove();
