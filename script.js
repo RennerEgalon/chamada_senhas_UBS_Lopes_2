@@ -9,6 +9,16 @@ function salvarMaiorSenhaFirebase(idColuna, numeroSenha) {
   firebase.database().ref('maioresSenhasPorColuna/' + idColuna).set(numeroSenha);
 }
 
+async function atualizarContadorFirebaseSeMaior(tipo, numero) {
+  const ref = firebase.database().ref(tipo === 'normal' ? 'contadorNormal' : 'contadorPreferencial');
+  const snapshot = await ref.get();
+  const atual = snapshot.exists() ? snapshot.val() : 0;
+
+  if (numero > atual) {
+    await ref.set(numero);
+  }
+}
+
 function falarVacAdulto() {
   falar("Atenção, para vacinação adulto, tenha em mãos documento com foto");
 }
@@ -191,6 +201,9 @@ function criarBotao(idColuna, texto, classe) {
     if (!maioresSenhasPorColuna[idColuna] || numeroSenha > maioresSenhasPorColuna[idColuna]) {
       maioresSenhasPorColuna[idColuna] = numeroSenha;
       salvarMaiorSenhaFirebase(idColuna, numeroSenha);
+      const tipo = isPreferencial ? 'preferencial' : 'normal';
+      atualizarContadorFirebaseSeMaior(tipo, numeroSenha);
+
     }
 
     const limite = maioresSenhasPorColuna[idColuna];
