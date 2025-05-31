@@ -9,8 +9,8 @@ function salvarMaiorSenhaFirebase(idColuna, numeroSenha) {
   firebase.database().ref('maioresSenhasPorColuna/' + idColuna).set(numeroSenha);
 }
 
-async function atualizarContadorFirebaseSeMaior(tipo, numero) {
-  const ref = firebase.database().ref(tipo === 'normal' ? 'contadorNormal' : 'contadorPreferencial');
+async function atualizarContadorFirebaseSeMaior(idColuna, numero) {
+  const ref = firebase.database().ref('contadores/' + idColuna);
   const snapshot = await ref.get();
   const atual = snapshot.exists() ? snapshot.val() : 0;
 
@@ -201,7 +201,6 @@ function criarBotao(idColuna, texto, classe) {
     if (!maioresSenhasPorColuna[idColuna] || numeroSenha > maioresSenhasPorColuna[idColuna]) {
       maioresSenhasPorColuna[idColuna] = numeroSenha;
       salvarMaiorSenhaFirebase(idColuna, numeroSenha);
-      const tipo = isPreferencial ? 'preferencial' : 'normal';
       atualizarContadorFirebaseSeMaior(tipo, numeroSenha);
 
     }
@@ -429,41 +428,21 @@ window.addEventListener("DOMContentLoaded", atualizarControlesGuiche);
 
 let ultimaSenhaChamada = null;
 
-async function chamarSenhaSincronizada(tipo, guiche) {
-  const ref = firebase.database().ref(tipo === 'normal' ? 'contadorNormal' : 'contadorPreferencial');
+async function chamarSenhaPorAtalho(idColuna) {
+  const ref = firebase.database().ref('contadores/' + idColuna);
   const snapshot = await ref.get();
-  let contador = snapshot.exists() ? snapshot.val() : 0;
-  contador += 1;
-  await ref.set(contador);
-
-  const idColuna = tipo === 'normal'
-    ? (guiche === 1 ? 'coluna-normal-guiche1' : 'coluna-normal-guiche2')
-    : (guiche === 1 ? 'coluna-preferencial-guiche1' : 'coluna-preferencial-guiche2');
+  const atual = snapshot.exists() ? snapshot.val() : 0;
+  const proximo = atual + 1;
 
   const coluna = document.getElementById(idColuna);
   const botoes = Array.from(coluna.querySelectorAll('button'));
-  const botao = botoes.find(b => b.textContent.includes(`Senha ${contador} -`));
+  const botao = botoes.find(b => b.textContent.includes(`Senha ${proximo} -`));
 
   if (botao) {
     botao.click();
+    await firebase.database().ref('contadores/' + idColuna).set(proximo);
   } else {
-    console.error('Botão não encontrado:', `Senha ${contador} - Guichê ${guiche}`);
-  }
-}
-
-function chamarSenhaLocal(tipo) {
-  contadorLocal[tipo] += 1;
-  const guiche = 'Pós Consulta';
-  const idColuna = tipo === 'normal' ? 'coluna-normal-posconsulta' : 'coluna-preferencial-posconsulta';
-
-  const coluna = document.getElementById(idColuna);
-  const botoes = Array.from(coluna.querySelectorAll('button'));
-  const botao = botoes.find(b => b.textContent.includes(`Senha ${contadorLocal[tipo]} -`));
-
-  if (botao) {
-    botao.click();
-  } else {
-    console.error('Botão não encontrado:', `Senha ${contadorLocal[tipo]} - ${guiche}`);
+    console.error('Botão não encontrado:', `Senha ${proximo} - ${idColuna}`);
   }
 }
 
@@ -489,13 +468,13 @@ function esperarSegundoKey(tipo) {
     const k = e.key;
 
     if (tipo === 'n') {
-      if (k === '1') chamarSenhaSincronizada('normal', 1);
-      else if (k === '2') chamarSenhaSincronizada('normal', 2);
-      else if (k === '3') chamarSenhaLocal('normal');
+      if (k === '1') chamarSenhaPorAtalho('coluna-normal-guiche1');
+      else if (k === '2') chamarSenhaPorAtalho('coluna-normal-guiche2');
+      else if (k === '3') chamarSenhaPorAtalho('coluna-normal-posconsulta');
     } else if (tipo === 'p') {
-      if (k === '1') chamarSenhaSincronizada('preferencial', 1);
-      else if (k === '2') chamarSenhaSincronizada('preferencial', 2);
-      else if (k === '3') chamarSenhaLocal('preferencial');
+      if (k === '1') chamarSenhaPorAtalho('coluna-preferencial-guiche1');
+      else if (k === '2') chamarSenhaPorAtalho('coluna-preferencial-guiche2');
+      else if (k === '3') chamarSenhaPorAtalho('coluna-preferencial-posconsulta');
     }
 
     document.removeEventListener('keydown', segundaLetra);
@@ -503,4 +482,6 @@ function esperarSegundoKey(tipo) {
 
   document.addEventListener('keydown', segundaLetra);
 }
+
+
    
